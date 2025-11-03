@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Chat | Goit-IA{% endblock %}
+
+{% block content %}
+<div id="chat-container">
+    <div class="chat-header">
+        Conversación con Goit-IA
+    </div>
+    
+    <div class="chat-messages" id="chat-messages-container">
+        <div class="message bot">
+            ¡Hola! Soy Goit-IA, tu asistente académico de la FNT. ¿En qué puedo ayudarte hoy?
+        </div>
+    </div>
+    
+    <form class="chat-input" id="chat-form">
+        <input type="text" id="chat-input-field" placeholder="Escribe tu mensaje aquí..." required>
+        <button type="submit">Enviar</button>
+        
+        <div class="loading-bar-container" id="loading-bar-container">
+            <div class="loading-bar" id="loading-bar"></div>
+        </div>
+        </form>
+</div>
+{% endblock %}
