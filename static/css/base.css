@@ -5,9 +5,11 @@
 
 /* --- Variables (Colores y Temas) --- */
 :root {
-    /* MODO CLARO (Default) */
+    /* MODO CLARO */
     --bg-color: #FFFFFF;
-    --secondary-bg-color: #F4F4F7; /* Usado para el Footer en modo claro */
+    /* Degradado sutil de blanco a un gris azulado muy suave */
+    --bg-gradient: linear-gradient(135deg, #FFFFFF 0%, #F8F9FD 100%);
+    --secondary-bg-color: #F4F4F7;
     --text-color: #12121B;
     --text-secondary: #5a5a6a;
     --border-color: #E0E0E0;
@@ -22,7 +24,9 @@
 :root.dark-mode {
     /* MODO OSCURO */
     --bg-color: #12121B;
-    --secondary-bg-color: #1E1E28; /* Usado para el Footer en modo oscuro */
+    /* Degradado de negro azulado profundo a un tono ligeramente más claro/púrpura */
+    --bg-gradient: linear-gradient(135deg, #12121B 0%, #1A1A2E 100%);
+    --secondary-bg-color: #1E1E28;
     --text-color: #EFEFF1;
     --text-secondary: #9a9aab;
     --border-color: #3A3A4A;
@@ -38,10 +42,13 @@
 
 body {
     font-family: 'Poppins', sans-serif;
-    background-color: var(--bg-color);
+    /* Usamos el degradado como fondo principal */
+    background: var(--bg-gradient);
+    /* Aseguramos que el degradado cubra toda la pantalla incluso si hay poco contenido */
+    background-attachment: fixed; 
     color: var(--text-color);
     line-height: 1.6;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background 0.3s ease, color 0.3s ease;
     display: flex;
     flex-direction: column;
     min-height: 100vh;

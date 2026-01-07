@@ -18,8 +18,10 @@
 }
 
 .card {
-    background: var(--secondary-bg-color, #fff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     border-radius: 12px;
     padding: 2rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -274,7 +276,9 @@
 
 /* Estilo base de las tarjetas Bento */
 .bento-card {
-    background: var(--secondary-bg-color, #fff);
+    background: var(--secondary-bg-color);
+    /* Opcional: bajar opacidad si el fondo base tiene texturas */
+    opacity: 0.98;
     border: 1px solid var(--border-color, #e0e0e0);
     border-radius: 20px;
     padding: 2rem;
@@ -394,7 +398,6 @@
 .topics-header h3 {
     margin: 0;
     font-size: 1.3rem;
-    color: var(--text-primary, #333);
 }
 
 /* Badge animado "Activo" */
@@ -502,4 +505,116 @@ body.dark-mode .topic-tag:hover {
     border-color: var(--primary-color, #007bff);
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* Sombra más oscura */
+}
+
+/* ========================================= */
+/* --- MODO OSCURO PARA INFORMACION.HTML --- */
+/* ========================================= */
+
+:root.dark-mode .card {
+    background: #1e1e28; /* --secondary-bg-color aproximado */
+    border-color: var(--border-color);
+}
+
+:root.dark-mode .card h3 {
+    color: var(--text-color);
+}
+
+:root.dark-mode .card p {
+    color: var(--text-secondary);
+}
+
+/* Sección Tutorial */
+:root.dark-mode .tutorial-box {
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), transparent);
+    border-color: #3a3a4a;
+}
+
+:root.dark-mode .tutorial-icon-wrapper {
+    background: #2c2c3a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* Tech Stack */
+:root.dark-mode .tech-card {
+    background: #1e1e28;
+    border-color: transparent;
+}
+
+:root.dark-mode .tech-card:hover {
+    border-color: var(--primary-color);
+}
+
+:root.dark-mode .step-number {
+    color: #ffffff;
+    opacity: 0.15;
+}
+
+:root.dark-mode .full-span {
+    background: #1e1e28;
+    border-color: var(--border-color);
+}
+
+/* Características (Bento List) */
+:root.dark-mode .modern-list strong {
+    color: var(--text-color);
+}
+
+:root.dark-mode .modern-list span {
+    color: var(--text-secondary);
+}
+
+:root.dark-mode .list-icon {
+    background: rgba(10, 132, 255, 0.15); /* Azul más vibrante para contraste */
+}
+
+/* Features List (Sección 4 anterior) */
+:root.dark-mode .features-list li {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+}
+
+/* ========================================= */
+/* --- AJUSTES ESPECÍFICOS MODO OSCURO --- */
+/* ========================================= */
+
+/* 1. Corrección para Títulos de Secciones (imagen 2) */
+:root.dark-mode .tutorial-content h4 {
+    color: var(--text-color, #EFEFF1); /* Asegura que el título sea blanco/claro */
+}
+
+:root.dark-mode .tutorial-content p {
+    color: var(--text-secondary, #9a9aab); /* Texto descriptivo suave */
+}
+
+/* 2. Corrección para Tech Cards (imagen 3) */
+:root.dark-mode .tech-card h4 {
+    color: var(--text-color, #EFEFF1);
+}
+
+:root.dark-mode .tech-card p {
+    color: var(--text-secondary, #9a9aab);
+}
+
+:root.dark-mode .tech-card p em {
+    color: var(--primary-color); /* Resalta 'K-Nearest Neighbors' */
+    font-style: normal;
+}
+
+/* 3. Corrección para Temas Entrenados / Topic Tags (imagen 1) */
+:root.dark-mode .topics-card {
+    background: var(--secondary-bg-color);
+    border: 1px solid var(--border-color);
+}
+
+:root.dark-mode .topic-tag {
+    background-color: #2c2c3a; /* Fondo oscuro para la etiqueta */
+    border-color: #444;
+    color: #d1d1d1; /* Texto gris claro */
+}
+
+:root.dark-mode .topic-tag:hover {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
 }

@@ -19,7 +19,7 @@
     </div>
     
     <div class="loading-face" id="loading-face">
-        (•‿•) <br><span style="font-size: 1rem;">Pensando...</span>
+        (•‿•) <br><span>Pensando...</span>
     </div>
 
     <div class="regenerate-container">
@@ -65,32 +65,32 @@
             </div>
         </div>
 
-        <div id="step-disclaimer" style="display: none; text-align: left;">
-            <div class="access-title" style="font-size: 1.2rem; margin-bottom: 15px;">⚠️ Información Importante</div>
+        <div id="step-disclaimer" class="disclaimer-step">
+            <div class="access-title disclaimer-title">⚠️ Información Importante</div>
             
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; color: #333;">
-                <p style="margin-bottom: 10px;">
+            <div class="disclaimer-note">
+                <p>
                     <strong>Nota sobre las respuestas:</strong><br>
                     Si la respuesta generada no es correcta o no se adapta a lo que necesitas, por favor utiliza el botón:
                 </p>
-                <div style="text-align: center; margin: 10px 0;">
-                    <span style="background: #e2e6ea; padding: 5px 10px; border-radius: 4px; font-weight: bold;">🔄 Generar otra respuesta</span>
+                <div class="fake-btn-container">
+                    <span class="fake-btn-label">🔄 Generar otra respuesta</span>
                 </div>
                 <p>Esto ayudará a Goit-IA a brindarte una respuesta más acertada.</p>
             </div>
 
-            <div style="margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px;">
+            <div class="terms-container">
                 <input type="checkbox" id="terms-check" onchange="toggleContinueButton()">
-                <label for="terms-check" style="font-size: 0.9rem; cursor: pointer;">
+                <label for="terms-check">
                     He leído y acepto los 
-                    <a href="{{ url_for('privacidad.privacidad') }}" target="_blank" style="color: #007bff; text-decoration: underline;">
+                    <a href="{{ url_for('privacidad.privacidad') }}" target="_blank">
                         términos y condiciones
                     </a> 
                     vinculados al aviso de privacidad del sistema.
                 </label>
             </div>
 
-            <button id="btn-continue-chat" class="program-btn" style="width: 100%; background-color: #ccc; cursor: not-allowed;" disabled onclick="finalizeLogin()">
+            <button id="btn-continue-chat" class="program-btn btn-continue" disabled onclick="finalizeLogin()">
                 Continuar al Chat
             </button>
         </div>
