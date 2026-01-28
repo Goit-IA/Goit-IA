@@ -24,14 +24,29 @@
       {% endif %}
     {% endwith %}
 
-    <div class="dashboard-panel">
-        <h3 class="panel-title"> Estado de la IA</h3>
+<div class="dashboard-panel">
+        <h3 class="panel-title">🧠 Estado de la IA y Entrenamiento</h3>
         <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-            Si has subido, borrado o editado documentos, entrena el modelo para actualizar la IA.
+            Si has subido documentos nuevos, presiona entrenar para actualizar el cerebro de la IA.
         </p>
-        <form action="{{ url_for('admin.train_model') }}" method="POST">
-            <button type="submit" class="cta-button"> Entrenar Modelo Ahora</button>
-        </form>
+        
+        <button id="btnTrain" onclick="startTraining()" class="cta-button"
+        data-stream-url="{{ url_for('admin.train_stream') }}"
+        data-complete-url="{{ url_for('admin.train_complete') }}">
+            ▶ Entrenar Modelo Ahora
+        </button>
+
+        <div id="terminalContainer" style="display: none; margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-weight: bold; font-size: 0.9rem;">Proceso de Entrenamiento:</span>
+                <a id="btnFinish" href="{{ url_for('admin.dashboard') }}" class="btn-small btn-secondary" style="display: none; background: var(--bg-color);">
+                    Actualizar página
+                </a>
+            </div>
+            
+            <div id="terminalOutput" class="terminal-window">
+                </div>
+        </div>
     </div>
 
     <div class="dashboard-grid">
@@ -69,8 +84,18 @@
                 <button type="submit" class="cta-button btn-small">Subir</button>
             </form>
             
+            <div class="filter-controls">
+                <input type="text" id="pdfSearch" class="filter-input" placeholder="Buscar PDF por nombre..." onkeyup="filterAndSort('pdf')">
+                <select id="pdfSort" class="filter-select" onchange="filterAndSort('pdf')">
+                    <option value="newest">Más recientes </option>
+                    <option value="oldest">Más antiguos </option>
+                    <option value="az">Alfabético (A-Z)</option>
+                    <option value="za">Alfabético (Z-A)</option>
+                </select>
+            </div>
+
             <div class="table-container">
-                <table class="data-table">
+                <table class="data-table" id="pdfTable">
                     <thead>
                         <tr>
                             <th>Nombre</th>
@@ -81,8 +106,8 @@
                     <tbody>
                         {% if pdfs %}
                             {% for pdf in pdfs %}
-                            <tr>
-                                <td title="{{ pdf.filename }}" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <tr data-index="{{ loop.index0 }}">
+                                <td class="searchable-name" title="{{ pdf.filename }}" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                     {{ pdf.filename }}
                                 </td>
                                 <td>
@@ -93,10 +118,7 @@
                                     {% endif %}
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
-                                    <button type="button" class="btn-icon btn-edit" onclick="openPdfModal('{{ pdf.filename }}')" title="Renombrar">
-                                        ✏️
-                                    </button>
-
+                                    <button type="button" class="btn-icon btn-edit" onclick="openPdfModal('{{ pdf.filename }}')" title="Renombrar">✏️</button>
                                     <form action="{{ url_for('admin.delete_pdf') }}" method="POST" onsubmit="return confirm('¿Seguro que quieres eliminar este PDF?');" style="display:inline;">
                                         <input type="hidden" name="filename" value="{{ pdf.filename }}">
                                         <button type="submit" class="btn-icon btn-danger" title="Eliminar">🗑️</button>
@@ -121,8 +143,18 @@
                 <button type="submit" class="cta-button btn-small" style="align-self: flex-start; margin-top:5px;">Agregar</button>
             </form>
 
+            <div class="filter-controls">
+                <input type="text" id="urlSearch" class="filter-input" placeholder="Buscar enlace..." onkeyup="filterAndSort('url')">
+                <select id="urlSort" class="filter-select" onchange="filterAndSort('url')">
+                    <option value="newest">Más recientes </option>
+                    <option value="oldest">Más antiguos </option>
+                    <option value="az">Alfabético (A-Z)</option>
+                    <option value="za">Alfabético (Z-A)</option>
+                </select>
+            </div>
+
             <div class="table-container">
-                <table class="data-table">
+                <table class="data-table" id="urlTable">
                     <thead>
                         <tr>
                             <th>Tema</th>
@@ -133,8 +165,8 @@
                     <tbody>
                         {% if urls %}
                             {% for url in urls %}
-                            <tr>
-                                <td>
+                            <tr data-index="{{ loop.index0 }}">
+                                <td class="searchable-name">
                                     <a href="{{ url.url }}" target="_blank" style="font-weight: 500;">{{ url.name }}</a>
                                 </td>
                                 <td>
@@ -145,10 +177,7 @@
                                     {% endif %}
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
-                                    <button type="button" class="btn-icon btn-edit" onclick="openUrlModal('{{ url.name }}', '{{ url.url }}')" title="Editar">
-                                        ✏️
-                                    </button>
-                                    
+                                    <button type="button" class="btn-icon btn-edit" onclick="openUrlModal('{{ url.name }}', '{{ url.url }}')" title="Editar">✏️</button>
                                     <form action="{{ url_for('admin.delete_url') }}" method="POST" onsubmit="return confirm('¿Eliminar enlace?');" style="display:inline;">
                                         <input type="hidden" name="url" value="{{ url.url }}">
                                         <button type="submit" class="btn-icon btn-danger" title="Eliminar">🗑️</button>
@@ -163,6 +192,7 @@
                 </table>
             </div>
         </div>
+    
     </div>
 </section>
 
@@ -188,12 +218,12 @@
                     {% if access_logs %}
                         {% for log in access_logs %}
                         <tr>
-                            <td style="white-space: nowrap;">{{ log.Fecha }}</td>
-                            <td>{{ log.Hora }}</td>
-                            <td style="font-weight: 500;">{{ log.Programa }}</td>
-                            <td>{{ log.IP }}</td>
-                            <td style="font-size: 0.8rem; color: var(--text-secondary);" title="{{ log.Dispositivo }}">
-                                {{ log.Dispositivo[:30] }}...
+                            <td style="white-space: nowrap;">{{ log.fecha }}</td>
+                            <td>{{ log.hora }}</td>
+                            <td style="font-weight: 500;">{{ log.programa }}</td>
+                            <td>{{ log.ip }}</td>
+                            <td style="font-size: 0.8rem; color: var(--text-secondary);" title="{{ log.dispositivo }}">
+                                {{ log.dispositivo[:30] }}...
                             </td>
                         </tr>
                         {% endfor %}
@@ -258,35 +288,6 @@
     </div>
 </div>
 
-<script>
-    // --- LÓGICA JAVASCRIPT UNIFICADA ---
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
-    // Abrir Modal URL
-    function openUrlModal(name, url) {
-        document.getElementById('edit_url_original').value = url;
-        document.getElementById('edit_url_name').value = name;
-        document.getElementById('edit_url_value').value = url;
-        document.getElementById('urlModal').style.display = 'flex';
-    }
-
-    // Abrir Modal PDF
-    function openPdfModal(filename) {
-        document.getElementById('edit_pdf_original').value = filename;
-        // Quitamos la extensión visualmente para que sea más fácil editar
-        const nameWithoutExt = filename.replace('.pdf', '');
-        document.getElementById('edit_pdf_new').value = nameWithoutExt;
-        document.getElementById('pdfModal').style.display = 'flex';
-    }
-
-    // Cerrar al hacer clic fuera (Cualquier modal)
-    window.onclick = function(event) {
-        const modals = ['logModal', 'urlModal', 'pdfModal'];
-        modals.forEach(id => {
-            const modal = document.getElementById(id);
-            if (event.target == modal) {
-                modal.style.display = 'none';
-            }
-        });
-    }
-</script>
 {% endblock %}

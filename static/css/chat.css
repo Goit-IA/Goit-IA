@@ -50,24 +50,58 @@
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ESTILOS DEL BOT */
 .message.bot {
-    /* Usa la variable específica definida en style.css */
+    /* Esta línea mantiene el fondo distintivo (grisáceo o según tu tema) */
     background-color: var(--bg-color); 
+    
     color: var(--text-color);
     align-self: flex-start;
+    
+    /* Bordes redondeados (la forma de burbuja) */
     border-bottom-left-radius: 4px;
-    border: 1px solid var(--border-color); /* Borde sutil para resaltar en modo oscuro */
+    border-radius: 18px; /* Mantiene la redondez general */
+    
+    border: 1px solid var(--border-color);
     line-height: 1.6;
+    
+    /* Asegura que el texto respete el espacio de la burbuja */
+    padding: 1rem 1.25rem; 
+    width: fit-content;
+}
+
+/* ESTILOS DEL BOT */
+.message.bot p {
+    margin-bottom: 10px; /* Separación entre párrafos */
+    margin-top: 0;
+}
+
+.message.bot p:last-child {
+    margin-bottom: 0; /* Quitar margen al último párrafo */
+}
+
+.message.bot ul, .message.bot ol {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    padding-left: 20px; /* Sangría para que los puntos se vean bien */
+}
+
+.message.bot li {
+    margin-bottom: 5px; /* Espacio entre cada punto */
+    list-style-type: disc; /* Asegura que salgan los puntos */
 }
 
 /* Títulos y negritas dentro del mensaje del Bot */
-.message.bot strong {
+.message.bot strong, .message.bot b {
     font-weight: 700;
-    /* Usa el color de texto principal, se adaptará a blanco en modo oscuro */
-    color: var(--text-color); 
-    display: inline-block;
-    margin-top: 5px;
+    color: var(--primary-color); /* Opcional: Resalta las palabras clave en azul/color tema */
+}
+
+.message.bot h1, .message.bot h2, .message.bot h3 {
+    font-size: 1.1em;
+    font-weight: 800;
+    margin-top: 15px;
+    margin-bottom: 8px;
+    color: var(--text-color);
 }
 
 .message.bot .chat-title {

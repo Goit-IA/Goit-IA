@@ -2,7 +2,7 @@ import os
 import json
 import shutil
 import sys
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response, stream_with_context
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -316,24 +316,34 @@ def edit_url():
 # 7. ENTRENAMIENTO IA
 # ==========================================
 
-@admin_bp.route('/train', methods=['POST'])
+@admin_bp.route('/train_stream')
 @login_required
-def train_model():
-    try:
-        registry = load_registry()
+def train_stream():
+    """
+    Ruta que devuelve un flujo de eventos (Server-Sent Events).
+    El navegador se conecta aquí y recibe texto línea por línea.
+    """
+    registry = load_registry()
+    
+    # Obtenemos el generador
+    generador = actualizar_base_datos_completa(registry)
+    
+    # Retornamos una respuesta de tipo streaming
+    return Response(stream_with_context(generador), mimetype='text/event-stream')
+
+@admin_bp.route('/train_complete', methods=['POST'])
+@login_required
+def train_complete():
+    """
+    Ruta para finalizar el proceso y actualizar estados en JSON.
+    Se llama vía AJAX cuando el streaming termina.
+    """
+    registry = load_registry()
+    
+    # Actualizamos estados a 'Activo'
+    if 'pdfs' in registry:
+        for item in registry['pdfs']: item['status'] = 'Activo'
+    for item in registry.get('urls', []): item['status'] = 'Activo'
         
-        # Llamamos a tu función de entrenamiento existente
-        actualizar_base_datos_completa(registry)
-        
-        # Si todo sale bien, actualizamos estados a 'Activo'
-        if 'pdfs' in registry:
-            for item in registry['pdfs']: item['status'] = 'Activo'
-        for item in registry['urls']: item['status'] = 'Activo'
-            
-        save_registry(registry)
-        flash('Modelo actualizado con éxito.', 'success')
-    except Exception as e:
-        print(f"Error detallado entrenamiento: {e}")
-        flash(f'Error durante el entrenamiento: {str(e)}', 'error')
-        
-    return redirect(url_for('admin.dashboard'))
+    save_registry(registry)
+    return {"status": "ok", "message": "Estados actualizados"}

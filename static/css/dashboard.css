@@ -111,11 +111,32 @@
 
 /* TABLAS */
 .table-container {
-    overflow-x: auto;
+    overflow-x: auto; /* Mantiene scroll horizontal si es necesario */
+    overflow-y: auto; /* Activa el scroll vertical */
+    
+    /* Altura calculada para aprox. 10 filas + encabezado */
+    max-height: 500px; 
+    
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--bg-color);
     min-height: 100px;
+    
+    /* Sombra interna suave para indicar que hay scroll (opcional) */
+    scrollbar-width: thin; /* Para Firefox */
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.table-container::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 4px;
 }
 
 .data-table {
@@ -131,6 +152,10 @@
     border-bottom: 2px solid var(--border-color);
     font-weight: 600;
     background-color: var(--secondary-bg-color);
+    position: sticky; /* Hace que se "pegue" arriba */
+    top: 0;           /* Se queda en la posición 0 del contenedor */
+    z-index: 10;      /* Asegura que flote por encima del texto */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra para separar del contenido */
 }
 
 .data-table td {
@@ -242,4 +267,87 @@
 @keyframes slideUp {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+}
+
+/* --- AGREGAR AL FINAL DE dashboard.css --- */
+
+/* BARRA DE FILTROS Y BÚSQUEDA */
+.filter-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-input {
+    flex: 2; /* Ocupa más espacio */
+    padding: 0.6rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+    min-width: 200px;
+}
+
+.filter-select {
+    flex: 1;
+    padding: 0.6rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+.filter-input:focus, .filter-select:focus {
+    border-color: var(--primary-color);
+}
+
+/* Ajuste para móvil */
+@media (max-width: 600px) {
+    .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* --- CONSOLA DE ENTRENAMIENTO (LOG) --- */
+.terminal-window {
+    background-color: #1e1e1e;
+    color: #00ff00; /* Verde hacker */
+    font-family: 'Courier New', Courier, monospace;
+    padding: 1.5rem;
+    border-radius: 8px;
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #333;
+    margin-top: 1rem;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    display: none; /* Oculto por defecto */
+}
+
+.terminal-line {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    border-bottom: 1px solid #333;
+    padding-bottom: 2px;
+    animation: fadeIn 0.3s;
+}
+
+/* Indicador de carga parpadeante */
+.blinking-cursor::after {
+    content: "▋";
+    animation: blink 1s step-start infinite;
+    color: #00ff00;
+    margin-left: 5px;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
 }

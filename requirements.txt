@@ -14,3 +14,13 @@ tqdm
 langchain-groq
 python-dotenv
 pypdf
+psycopg2-binary
+sqlalchemy
+pandas
+langchain-huggingface
+sentence-transformers
+langchain-chroma
+ pdfplumber
+PyPDF2>=3.0.0
+reportlab
+pypdf

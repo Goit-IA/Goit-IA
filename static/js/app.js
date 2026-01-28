@@ -123,21 +123,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 5. FUNCIONES DE INTERFAZ CHAT ---
 
     function addMessage(text, sender) {
-        const div = document.createElement('div');
-        div.classList.add('message', sender);
-        
-        if (sender === 'bot') {
-            div.innerHTML = text; 
+    const div = document.createElement('div');
+    div.classList.add('message', sender);
+    
+    if (sender === 'bot') {
+        // MODIFICACIÓN: Usamos marked.parse para convertir Markdown a HTML
+        // Verificamos si la librería cargó correctamente para evitar errores
+        if (typeof marked !== 'undefined') {
+            div.innerHTML = marked.parse(text); 
         } else {
-            div.textContent = text;
+            div.innerHTML = text; // Fallback por si falla la librería
         }
+    } else {
+        div.textContent = text;
+    }
 
-        messagesContainer.appendChild(div);
-        
-        // Scroll al fondo
-        messagesContainer.scrollTo({
-            top: messagesContainer.scrollHeight,
-            behavior: 'smooth'
+    messagesContainer.appendChild(div);
+    
+    // Scroll al fondo
+    messagesContainer.scrollTo({
+        top: messagesContainer.scrollHeight,
+        behavior: 'smooth'
         });
     }
 
@@ -174,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         try {
-            const response = await fetch('/api/chat', {
+            const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: message, mode: mode })
@@ -215,8 +221,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnRegenerate) {
         btnRegenerate.addEventListener('click', () => {
             console.log("🔄 Botón regenerar presionado.");
+            const userMessages = messagesContainer.querySelectorAll('.message.user');
+            if (userMessages.length > 0) {
+            const lastUserMessage = userMessages[userMessages.length - 1].textContent;
+            
+            // 3. Borramos la respuesta anterior del bot visualmente
             removeLastBotMessage();
-            sendMessage("", 'regenerate');
+            
+            // 4. Reenviamos el texto exacto que el usuario escribió antes
+            // Nota: Enviamos 'regenerate' como modo para que el backend sepa qué hacer si quiere
+            sendMessage(lastUserMessage, 'regenerate'); 
+        } else {
+            console.error("No hay mensajes de usuario para regenerar.");
+        }
         });
     }
 });

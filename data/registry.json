@@ -190,14 +190,14 @@
             "name": "informes-de-situacion-financiera",
             "url": "https://www.uv.mx/orizaba/negocios/informes-de-situacion-financiera/",
             "status": "Activo"
+        },
+        {
+            "name": "Convocatoria EGEL",
+            "url": "https://www.uv.mx/escolar/egelnacional-2026-1/convocatoria/index.html",
+            "status": "Activo"
         }
     ],
     "pdfs": [
-        {
-            "filename": "Tabulador-de-Cuotas-por-Serv.-Acad.-y-Admvos.-UV-febrero-2025.pdf",
-            "path": "data/uploads\\Tabulador-de-Cuotas-por-Serv.-Acad.-y-Admvos.-UV-febrero-2025.pdf",
-            "status": "Activo"
-        },
         {
             "filename": "RComitesProMejoras2023_1.pdf",
             "path": "data/uploads\\RComitesProMejoras2023_1.pdf",
