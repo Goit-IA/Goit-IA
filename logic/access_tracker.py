@@ -4,89 +4,114 @@ import sys
 import os
 
 # --- CONFIGURACIÓN DE RUTAS ---
-# Obtenemos la ruta del directorio actual (logic)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# Obtenemos la raíz del proyecto (un nivel arriba)
+current_dir  = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 
-# Agregamos la raíz al path para poder importar 'database.py'
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-# --- IMPORTS DE BASE DE DATOS ---
-from database import SessionLocal, AccessLog, engine
+# --- IMPORTS DE BASE DE DATOS (MongoDB) ---
+from database import (
+    insert_access_log, get_all_access_logs,
+    insert_chat_log,
+)
 
-def registrar_acceso(programa, ip, dispositivo):
+
+# ──────────────────────────────────────────────────────────────
+# REGISTRO DE ACCESO  (paso del modal: matrícula + programa)
+# ──────────────────────────────────────────────────────────────
+
+def registrar_acceso(programa: str, ip: str,
+                     dispositivo: str, matricula: str = "") -> bool:
     """
-    Guarda el registro de acceso en la Base de Datos PostgreSQL.
+    Guarda el registro de acceso en MongoDB.
+    El campo `matricula` es opcional para compatibilidad con registros
+    anteriores que no lo incluyen.
     """
     ahora = datetime.now()
-    
-    # Abrimos una sesión temporal con la base de datos
-    db = SessionLocal()
-    
     try:
-        # Creamos el objeto (fila) para insertar
-        nuevo_log = AccessLog(
-            dia=ahora.strftime('%A'),
-            fecha=ahora.strftime('%Y-%m-%d'),
-            hora=ahora.strftime('%H:%M:%S'),
-            programa=programa,
-            dispositivo=dispositivo,
-            ip=ip
+        insert_access_log(
+            dia        = ahora.strftime('%A'),
+            fecha      = ahora.strftime('%Y-%m-%d'),
+            hora       = ahora.strftime('%H:%M:%S'),
+            programa   = programa,
+            dispositivo= dispositivo,
+            ip         = ip,
+            matricula  = matricula,
         )
-        
-        # Guardamos y confirmamos cambios
-        db.add(nuevo_log)
-        db.commit()
-        print(f"✅ Acceso registrado en DB: {programa} desde {ip}")
+        print(f"✅ Acceso registrado: {matricula} | {programa} desde {ip}")
         return True
-        
     except Exception as e:
-        print(f"❌ Error registrando acceso en DB: {e}")
-        db.rollback() # Deshacemos cambios si hubo error
+        print(f"❌ Error registrando acceso en MongoDB: {e}")
         return False
-        
-    finally:
-        db.close() # Cerramos la conexión siempre
 
-def obtener_estadisticas_diarias():
+
+# ──────────────────────────────────────────────────────────────
+# REGISTRO DE PREGUNTA  (nuevo — por cada mensaje al chat)
+# ──────────────────────────────────────────────────────────────
+
+def registrar_pregunta(matricula: str, programa: str,
+                       pregunta: str, respuesta: str,
+                       modelo: str) -> bool:
     """
-    Devuelve el conteo de visitas por programa para las gráficas.
-    Lee directamente desde PostgreSQL usando Pandas.
+    Guarda cada pregunta/respuesta junto con la matrícula del alumno,
+    el programa educativo y el modelo que respondió (KNN o LLM).
     """
+    ahora = datetime.now()
     try:
-        # Consulta SQL optimizada: solo traemos la columna que nos interesa contar
-        query = "SELECT programa FROM access_log"
-        df = pd.read_sql(query, engine)
-        
-        if df.empty:
+        insert_chat_log(
+            matricula = matricula,
+            programa  = programa,
+            pregunta  = pregunta,
+            respuesta = respuesta,
+            modelo    = modelo,
+            fecha     = ahora.strftime('%Y-%m-%d'),
+            hora      = ahora.strftime('%H:%M:%S'),
+        )
+        print(f"✅ Pregunta registrada: {matricula} | modelo={modelo}")
+        return True
+    except Exception as e:
+        print(f"❌ Error registrando pregunta en MongoDB: {e}")
+        return False
+
+
+# ──────────────────────────────────────────────────────────────
+# ESTADÍSTICAS Y LISTADOS  (para el panel de admin)
+# ──────────────────────────────────────────────────────────────
+
+def obtener_estadisticas_diarias() -> dict:
+    """Conteo de accesos por programa (para tarjetas del dashboard)."""
+    try:
+        registros = get_all_access_logs()
+        if not registros:
             return {}
-            
-        # Contamos cuántas veces aparece cada programa
+        df = pd.DataFrame(registros)
         return df['programa'].value_counts().to_dict()
-        
     except Exception as e:
         print(f"❌ Error obteniendo estadísticas: {e}")
         return {}
 
-def obtener_todos_los_registros():
+
+def obtener_todos_los_registros() -> list[dict]:
     """
-    Devuelve todos los registros para la tabla del panel de administración.
-    Ordenados del más reciente al más antiguo.
+    Todos los registros de acceso para la tabla del panel de administración,
+    del más reciente al más antiguo.
     """
     try:
-        # Consulta SQL ordenando por fecha y hora descendente
-        query = "SELECT * FROM access_log ORDER BY fecha DESC, hora DESC"
-        
-        df = pd.read_sql(query, engine)
-        
-        if df.empty:
+        registros = get_all_access_logs()
+        if not registros:
             return []
-            
-        # Convertimos a lista de diccionarios para que Jinja (HTML) lo renderice igual que antes
+
+        df = pd.DataFrame(registros)
+
+        # Asegurar que la columna matricula exista (registros viejos no la tienen)
+        if 'matricula' not in df.columns:
+            df['matricula'] = ''
+
+        df = df.fillna('')
+        df = df.sort_values(by=['fecha', 'hora'], ascending=False)
         return df.to_dict(orient='records')
-        
+
     except Exception as e:
         print(f"❌ Error obteniendo registros históricos: {e}")
         return []

@@ -1,4 +1,4 @@
-Flask == 3.1.2
+Flask==3.1.2
 langchain
 langchain-community
 langchain-core
@@ -14,13 +14,11 @@ tqdm
 langchain-groq
 python-dotenv
 pypdf
-psycopg2-binary
-sqlalchemy
+pymongo
 pandas
 langchain-huggingface
 sentence-transformers
 langchain-chroma
- pdfplumber
+pdfplumber
 PyPDF2>=3.0.0
 reportlab
-pypdf

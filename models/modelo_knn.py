@@ -1,122 +1,140 @@
-import pandas as pd
-import re
+# models/modelo_knn.py
 import os
 import sys
-import nltk
-from nltk.corpus import stopwords
-from sklearn.feature_extraction.text import CountVectorizer
+import time
+import numpy as np
 from sklearn.neighbors import NearestNeighbors
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
+from dotenv import load_dotenv
 
-# --- IMPORTS DE BASE DE DATOS (NUEVO) ---
-# Aseguramos que la raíz del proyecto esté en el path para importar 'database'
+load_dotenv()
+
+# --- CONFIGURACIÓN DE RUTAS ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
-if project_root not in sys.path: sys.path.append(project_root)
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
-from database import engine
+# --- IMPORTS DE BASE DE DATOS (MongoDB) ---
+from database import faq_collection
 
-# --- INICIALIZACIÓN GLOBAL ---
+# --- MODELO DE EMBEDDINGS VÍA API ---
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
+print("🔄 Conectando con API de embeddings (HuggingFace)...")
+modelo_embedding = HuggingFaceEndpointEmbeddings(
+    model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    huggingfacehub_api_token=HF_TOKEN
+)
+print("✅ API de embeddings lista.")
 
-stop_words_global = set(stopwords.words('spanish'))
+# --- VARIABLES GLOBALES DEL MODELO KNN ---
+knn_model       = None
+respuestas_knn  = []
+bloqueado_flags = []
 
-# Variables globales del modelo
-knn_model = None
-vectorizer = None
-respuestas_knn = []
+# Control de reintentos: evita llamadas repetidas al arrancar
+_ultimo_intento  = 0.0
+_MIN_SEGUNDOS_REINTENTO = 30   # no reintentar más frecuente que cada 30 s
 
-def limpiar_texto(texto):
-    """Limpia y preprocesa una cadena de texto."""
-    if not isinstance(texto, str):
-        return ""
-    texto = texto.lower()
-    texto = re.sub(r'[^\w\s]', '', texto)
-    texto = re.sub(r'\s+', ' ', texto).strip()
-    palabras = texto.split()
-    palabras_filtradas = [p for p in palabras if p not in stop_words_global]
-    return ' '.join(palabras_filtradas)
 
 def inicializar_knn():
     """
-    Carga los datos desde PostgreSQL y entrena (o re-entrena) el modelo KNN.
-    Esta función se llamará al inicio y cada vez que el chatbot aprenda algo nuevo.
+    Carga los datos desde MongoDB y entrena el modelo KNN.
+    Puede llamarse al arrancar y también de forma diferida desde
+    obtener_respuesta_knn() si el arranque falló.
     """
-    global knn_model, vectorizer, respuestas_knn
-    
+    global knn_model, respuestas_knn, bloqueado_flags, _ultimo_intento
+
+    _ultimo_intento = time.monotonic()
+
     try:
-        print("🔄 Cargando base de conocimiento FAQ desde Base de Datos...")
-        query = "SELECT pregunta, respuesta FROM faq"
-        df = pd.read_sql(query, engine)
+        print("🔄 Cargando base de conocimiento FAQ desde MongoDB...")
 
-        # Validación si la tabla está vacía
-        if df.empty:
-            print("⚠️ Advertencia: La tabla FAQ en la base de datos está vacía. El modelo KNN no sabrá nada.")
+        documentos = list(faq_collection.find(
+            {}, {"_id": 0, "pregunta": 1, "respuesta": 1, "bloqueado": 1}
+        ))
+
+        if not documentos:
+            print("⚠️ La colección FAQ está vacía. KNN desactivado hasta que haya FAQs.")
+            knn_model       = None
+            respuestas_knn  = []
+            bloqueado_flags = []
             return
 
-        # Normalización de nombres de columnas (SQLAlchemy devuelve minúsculas, pero aseguramos)
-        df.columns = [c.lower() for c in df.columns]
+        preguntas       = [doc['pregunta'] for doc in documentos]
+        respuestas_knn  = [doc['respuesta'] for doc in documentos]
+        bloqueado_flags = [doc.get('bloqueado', False) for doc in documentos]
 
-        # Validación de estructura
-        if 'pregunta' not in df.columns or 'respuesta' not in df.columns:
-            print("❌ Error KNN: La tabla FAQ no tiene las columnas 'pregunta' y 'respuesta'.")
-            return
+        # Generar embeddings de todas las preguntas vía API
+        X_dataset = np.array(modelo_embedding.embed_documents(preguntas))
 
-        # --- PROCESAMIENTO (Igual que antes) ---
-        
-        # Limpiamos las preguntas
-        preguntas_limpias = [limpiar_texto(str(p)) for p in df['pregunta']]
-        
-        # Guardamos las respuestas originales en memoria
-        respuestas_knn = df['respuesta'].tolist()
-
-        # Entrenamiento
-        vectorizer = CountVectorizer()
-        X_dataset = vectorizer.fit_transform(preguntas_limpias)
-
-        knn_model = NearestNeighbors(n_neighbors=1, metric='cosine')
+        # n_neighbors=min(3, total): top-3 candidatos para mayor robustez
+        n_vecinos = min(3, len(preguntas))
+        knn_model = NearestNeighbors(n_neighbors=n_vecinos, metric='cosine')
         knn_model.fit(X_dataset)
-        
-        print(f"✅ Modelo KNN actualizado desde DB. Total conocimientos cargados: {len(respuestas_knn)}")
+
+        bloqueadas = sum(1 for b in bloqueado_flags if b)
+        print(
+            f"✅ Modelo KNN listo. Total: {len(respuestas_knn)} FAQs "
+            f"({bloqueadas} bloqueadas, {n_vecinos} vecinos activos)."
+        )
 
     except Exception as e:
-       print(f"⚠️ Advertencia KNN: No se pudo cargar la base de datos (Puede que esté vacía o no exista la tabla). Usando solo LLM. Detalle: {e}")
-    return
-    # Aquí podrías poner un fallback si quisieras, pero mejor que falle para que te des cuenta.
+        print(f"⚠️ No se pudo inicializar KNN. Usando solo LLM. Detalle: {e}")
+        knn_model = None
 
-# Carga inicial al importar el módulo
-inicializar_knn()
+
+# --- Intento de carga al arrancar (puede fallar si la red no está lista) ---
+try:
+    inicializar_knn()
+except Exception as e:
+    print(f"⚠️ KNN: fallo silencioso en el arranque ({e}). Se reintentará en la primera consulta.")
+    knn_model = None
+
 
 def obtener_respuesta_knn(pregunta_usuario):
     """
-    Recibe una pregunta, busca en el modelo KNN y retorna la respuesta más cercana
-    junto con la distancia (similitud).
+    Busca la FAQ más similar usando embeddings semánticos.
+
+    Si el modelo no está listo (falló al arrancar), intenta inicializarlo
+    de forma diferida antes de responder. El reintento respeta un intervalo
+    mínimo para no bloquear cada petición.
+
+    Retorna (respuesta, distancia_coseno, bloqueado):
+    - respuesta    : texto de la FAQ más cercana, o None.
+    - distancia    : 0.0 = idéntico, 1.0 = completamente diferente.
+    - bloqueado    : True si la FAQ tiene respuesta fija e inamovible.
     """
-    global knn_model, vectorizer, respuestas_knn
-    
-    # Si el modelo no cargó bien por error de DB, retornamos "lejos" para que use el LLM
-    if not knn_model:
-        return None, 1.0
+    global knn_model, _ultimo_intento
+
+    # Inicialización diferida: si falló al arrancar, reintenta ahora
+    if knn_model is None:
+        segundos_desde_ultimo = time.monotonic() - _ultimo_intento
+        if segundos_desde_ultimo >= _MIN_SEGUNDOS_REINTENTO:
+            print("[KNN] Reintentando inicialización diferida...")
+            inicializar_knn()
+
+    if knn_model is None:
+        return None, 1.0, False
 
     try:
-        pregunta_usuario_limpia = limpiar_texto(pregunta_usuario)
-        
-        # Transformar input del usuario a vector
-        X_usuario = vectorizer.transform([pregunta_usuario_limpia])
-        
-        # Buscar el vecino más cercano
+        X_usuario = np.array(
+            modelo_embedding.embed_query(pregunta_usuario)
+        ).reshape(1, -1)
+
         distancias, indices = knn_model.kneighbors(X_usuario)
 
-        indice_respuesta = indices[0][0]
-        distancia = distancias[0][0]
-        
-        respuesta = respuestas_knn[indice_respuesta]
-        
-        return respuesta, distancia
+        indice_mejor   = indices[0][0]
+        distancia_mejor = distancias[0][0]
+
+        respuesta = respuestas_knn[indice_mejor]
+        bloqueado = bloqueado_flags[indice_mejor] if bloqueado_flags else False
+
+        print(f"[KNN] Distancia coseno: {distancia_mejor:.4f} | Bloqueado: {bloqueado}")
+
+        return respuesta, distancia_mejor, bloqueado
 
     except Exception as e:
-        print(f"Error en predicción KNN: {e}")
-        return None, 1.0
+        print(f"[KNN] Error en predicción: {e}")
+        return None, 1.0, False
